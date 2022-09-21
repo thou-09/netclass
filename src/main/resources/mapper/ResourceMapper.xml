@@ -1,0 +1,373 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.itany.netclass.dao.ResourceMapper">
+    <!-- 二级缓存 -->
+    <cache/>
+
+    <!-- 新增一个资源 -->
+    <insert id="saveResource" parameterType="resource">
+        insert into t_resource
+            (title, path, cover_image_url, original_name, file_size, file_type, total_time,
+                click_count, create_date, cost_type, cost_number, user_id, chapter_id, status)
+        values
+            (#{title}, #{path}, #{coverImageUrl}, #{originalName}, #{fileSize}, #{fileType}, #{totalTime},
+                #{clickCount}, #{createDate}, #{costType}, #{costNumber}, #{userId}, #{chapterId}, #{status});
+    </insert>
+    
+    <!-- 新增一个资源，并返回对应的主键 -->
+    <insert id="savaResourceReturnPrimaryKey" parameterType="resource"
+            useGeneratedKeys="true" keyProperty="id" keyColumn="id">
+        insert into t_resource
+            (title, path, cover_image_url, original_name, file_size, file_type, total_time,
+                click_count, create_date, cost_type, cost_number, user_id, chapter_id, status)
+        values
+            (#{title}, #{path}, #{coverImageUrl}, #{originalName}, #{fileSize}, #{fileType}, #{totalTime},
+                #{clickCount}, #{createDate}, #{costType}, #{costNumber}, #{userId}, #{chapterId}, #{status});
+    </insert>
+
+    <!-- 根据 id 删除资源 -->
+    <delete id="removeResourceById" parameterType="integer">
+        delete
+        from t_resource
+        where id = #{id};
+    </delete>
+    
+    <!-- 根据 id 更新资源 -->
+    <update id="updateResourceById" parameterType="resource">
+        update t_resource
+        <set>
+            <if test="null != title and '' != title">
+                title = #{title},
+            </if>
+            <if test="null != path and '' != path">
+                path = #{path},
+            </if>
+            <if test="null != coverImageUrl and '' != coverImageUrl">
+                cover_image_url = #{coverImageUrl},
+            </if>
+            <if test="null != originalName and '' != originalName">
+                original_name = #{originalName},
+            </if>
+            <if test="null != fileSize and '' != fileSize">
+                file_size = #{fileSize},
+            </if>
+            <if test="null != fileType and '' != fileType">
+                file_type = #{fileType},
+            </if>
+            <if test="null != costType">
+                cost_type = #{costType},
+            </if>
+            <if test="null != costNumber">
+                cost_number = #{costNumber},
+            </if>
+            <if test="null != status">
+                status = #{status},
+            </if>
+            <if test="null != clickCount">
+                click_count = #{clickCount},
+            </if>
+            <if test="null != totalTime">
+                total_time = #{totalTime},
+            </if>
+            <if test="null == totalTime and null != fileType and '' != fileType">
+                total_time = #{totalTime},
+            </if>
+        </set>
+        where id = #{id};
+    </update>
+
+    <!-- 根据 chapterId 批量修改资源状态 -->
+    <update id="updateStatusByChapterIds">
+        update t_resource
+        <set>
+            <if test="null != status">
+                status = #{status}
+            </if>
+        </set>
+        where chapter_id in
+        <foreach collection="ids" item="id" separator="," open="(" close=")">
+            #{id}
+        </foreach>
+    </update>
+
+    <!-- 根据 id 查询资源 -->
+    <select id="getResourceById" parameterType="integer" resultMap="resource_map">
+        select <include refid="resource_column_list"/>
+        from t_resource
+        where id = #{id}
+    </select>
+
+    <!-- 根据 chapterId 查询资源 -->
+    <select id="getResourceByChapterId" parameterType="integer" resultMap="resource_map">
+        select <include refid="resource_column_list"/>
+        from t_resource
+        where chapter_id = #{cid}
+    </select>
+
+    <!-- 根据 title 查询资源 -->
+    <select id="getResourceByTitle" parameterType="string" resultMap="resource_map">
+        select <include refid="resource_column_list"/>
+        from t_resource
+        where title = #{title}
+    </select>
+
+    <!-- 根据 id 查询资源，包含发布用户和所属章节信息 -->
+    <select id="getResourceWithUserAndChapterById" resultMap="resource_with_user_and_chapter_map">
+        select <include refid="resource_column_list_with_user_and_chapter"/>
+        from t_resource r
+            left join t_user u
+                on r.user_id = u.id
+            left join t_chapter c
+                on r.chapter_id = c.id
+        where r.id = #{id}
+    </select>
+    
+    <!-- 查询所有资源 -->
+    <select id="listResources" parameterType="resourceQuery" resultMap="resource_map">
+        select <include refid="resource_column_list"/>
+        from t_resource
+        <where>
+            <if test="null != title and '' != title">
+                and title like concat('%', #{title}, '%')
+            </if>
+            <if test="null != createDateStart">
+                and create_date &gt;= #{createDateStart}
+            </if>
+            <if test="null != createDateEnd">
+                and create_date &lt;= #{createDateEnd}
+            </if>
+            <if test="null != status">
+                and status = #{status}
+            </if>
+            <if test="null != fileType and '' != fileType">
+                and file_type = #{fileType}
+            </if>
+        </where>
+    </select>
+
+    <!-- 根据条件查询所有资源，包含上传用户的信息 -->
+    <select id="listResourcesWithUser" parameterType="resourceQuery" resultMap="resource_with_user_map">
+        select <include refid="resource_column_list_with_user"/>
+        from t_resource r
+            left join t_user u
+                on r.user_id = u.id
+        <where>
+            <if test="null != title and '' != title">
+                and r.title like concat('%', #{title}, '%')
+            </if>
+            <if test="null != createDateStart">
+                and r.create_date &gt;= #{createDateStart}
+            </if>
+            <if test="null != createDateEnd">
+                and r.create_date &lt;= #{createDateEnd}
+            </if>
+            <if test="null != status">
+                and r.status = #{status}
+            </if>
+            <if test="null != fileType and '' != fileType">
+                and r.file_type = #{fileType}
+            </if>
+            <if test="null != userLoginName">
+                and u.login_name like concat('%', #{userLoginName}, '%')
+            </if>
+        </where>
+    </select>
+
+    <!-- 根据前台查询条件分页查询用户发布资源 -->
+    <select id="listForFront" resultMap="resource_with_user_map">
+        select <include refid="resource_column_list_with_user"/>
+        from t_resource r
+            left join t_user u
+                on r.user_id = u.id
+        <where>
+            <if test="null != title and '' != title">
+                and r.title like concat('%', #{title}, '%')
+            </if>
+            <if test="hideLearned == true">
+                and r.id not in (
+                    select r.id
+                    from t_user_resource
+                    where user_id = #{loginUserId}
+                )
+            </if>
+            and r.chapter_id is null and r.status = 1
+        </where>
+        <if test="sortType == 1">
+            order by r.create_date desc
+        </if>
+        <if test="sortType == 2">
+            order by r.click_count desc
+        </if>
+    </select>
+    
+    <!-- 根据 userId 查询用户上传的资源 -->
+    <select id="listUserResource" resultMap="resource_map">
+        select <include refid="resource_column_list"/>
+        from t_resource
+        where user_id = #{uid} and chapter_id is null
+    </select>
+
+    <sql id="resource_column_list">
+        id, 
+        title, 
+        path, 
+        cover_image_url,
+        original_name,
+        file_size,
+        file_type,
+        total_time,
+        click_count,
+        create_date,
+        cost_type,
+        cost_number,
+        user_id,
+        chapter_id,
+        status
+    </sql>
+
+    <sql id="resource_column_list_with_user">
+        u.id u_id,
+        u.login_name u_login_name,
+        u.nickname u_nickname,
+        u.password u_password,
+        u.role u_role,
+        u.email u_email,
+        u.sign_date u_sign_date,
+        u.create_date u_create_date,
+        u.status u_status,
+        r.id r_id,
+        r.title r_title,
+        r.path r_path,
+        r.cover_image_url r_cover_image_url,
+        r.original_name r_original_name,
+        r.file_size r_file_size,
+        r.file_type r_file_type,
+        r.total_time r_total_time,
+        r.click_count r_click_count,
+        r.create_date r_create_date,
+        r.cost_type r_cost_type,
+        r.cost_number r_cost_number,
+        r.user_id r_user_id,
+        r.chapter_id r_chapter_id,
+        r.status r_status
+    </sql>
+
+    <sql id="resource_column_list_with_user_and_chapter">
+        r.id r_id,
+        r.title r_title,
+        r.path r_path,
+        r.cover_image_url r_cover_image_url,
+        r.original_name r_original_name,
+        r.file_size r_file_size,
+        r.file_type r_file_type,
+        r.total_time r_total_time,
+        r.click_count r_click_count,
+        r.create_date r_create_date,
+        r.cost_type r_cost_type,
+        r.cost_number r_cost_number,
+        r.user_id r_user_id,
+        r.chapter_id r_chapter_id,
+        r.status r_status,
+        u.id u_id,
+        u.login_name u_login_name,
+        u.nickname u_nickname,
+        u.password u_password,
+        u.role u_role,
+        u.email u_email,
+        u.sign_date u_sign_date,
+        u.create_date u_create_date,
+        u.status u_status,
+        c.id c_id,
+        c.course_id c_course_id,
+        c.title c_title,
+        c.info c_info,
+        c.create_date c_create_date,
+        c.status c_status
+    </sql>
+
+    <resultMap id="resource_map" type="resource">
+        <id property="id" column="id"/>
+        <result property="title" column="title"/>
+        <result property="path" column="path"/>
+        <result property="coverImageUrl" column="cover_image_url"/>
+        <result property="originalName" column="original_name"/>
+        <result property="fileSize" column="file_size"/>
+        <result property="fileType" column="file_type"/>
+        <result property="totalTime" column="total_time"/>
+        <result property="clickCount" column="click_count"/>
+        <result property="createDate" column="create_date"/>
+        <result property="costType" column="cost_type"/>
+        <result property="costNumber" column="cost_number"/>
+        <result property="userId" column="user_id"/>
+        <result property="chapterId" column="chapter_id"/>
+        <result property="status" column="status"/>
+    </resultMap>
+
+    <resultMap id="resource_with_user_map" type="resource">
+        <id property="id" column="r_id"/>
+        <result property="title" column="r_title"/>
+        <result property="path" column="r_path"/>
+        <result property="coverImageUrl" column="r_cover_image_url"/>
+        <result property="originalName" column="r_original_name"/>
+        <result property="fileSize" column="r_file_size"/>
+        <result property="fileType" column="r_file_type"/>
+        <result property="totalTime" column="r_total_time"/>
+        <result property="clickCount" column="r_click_count"/>
+        <result property="createDate" column="r_create_date"/>
+        <result property="costType" column="r_cost_type"/>
+        <result property="costNumber" column="r_cost_number"/>
+        <result property="userId" column="r_user_id"/>
+        <result property="chapterId" column="r_chapter_id"/>
+        <result property="status" column="r_status"/>
+        <association property="user" javaType="user">
+            <id property="id" column="u_id"/>
+            <result property="loginName" column="u_login_name"/>
+            <result property="nickname" column="u_nickname"/>
+            <result property="password" column="u_password"/>
+            <result property="role" column="u_role"/>
+            <result property="email" column="u_email"/>
+            <result property="signDate" column="u_sign_date"/>
+            <result property="createDate" column="u_create_date"/>
+            <result property="status" column="u_status"/>
+        </association>
+    </resultMap>
+
+    <resultMap id="resource_with_user_and_chapter_map" type="resource">
+        <id property="id" column="r_id"/>
+        <result property="title" column="r_title"/>
+        <result property="path" column="r_path"/>
+        <result property="coverImageUrl" column="r_cover_image_url"/>
+        <result property="originalName" column="r_original_name"/>
+        <result property="fileSize" column="r_file_size"/>
+        <result property="fileType" column="r_file_type"/>
+        <result property="totalTime" column="r_total_time"/>
+        <result property="clickCount" column="r_click_count"/>
+        <result property="createDate" column="r_create_date"/>
+        <result property="costType" column="r_cost_type"/>
+        <result property="costNumber" column="r_cost_number"/>
+        <result property="userId" column="r_user_id"/>
+        <result property="chapterId" column="r_chapter_id"/>
+        <result property="status" column="r_status"/>
+        <association property="user" javaType="user">
+            <id property="id" column="u_id"/>
+            <result property="loginName" column="u_login_name"/>
+            <result property="nickname" column="u_nickname"/>
+            <result property="password" column="u_password"/>
+            <result property="role" column="u_role"/>
+            <result property="email" column="u_email"/>
+            <result property="signDate" column="u_sign_date"/>
+            <result property="createDate" column="u_create_date"/>
+            <result property="status" column="u_status"/>
+        </association>
+        <association property="chapter" javaType="chapter">
+            <id property="id" column="c_id"/>
+            <result property="courseId" column="c_course_id"/>
+            <result property="title" column="c_title"/>
+            <result property="info" column="c_info"/>
+            <result property="createDate" column="c_create_date"/>
+            <result property="status" column="c_status"/>
+        </association>
+    </resultMap>
+</mapper>

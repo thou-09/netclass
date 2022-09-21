@@ -1,0 +1,35 @@
+# transaction
+transactionManager=com.itany.netclass.transaction.impl.MyBatisTransactionManager
+
+# mapper
+chapterMapper=com.itany.netclass.dao.ChapterMapper
+commentMapper=com.itany.netclass.dao.CommentMapper
+courseMapper=com.itany.netclass.dao.CourseMapper
+courseTypeMapper=com.itany.netclass.dao.CourseTypeMapper
+goldPointsMapper=com.itany.netclass.dao.GoldPointsMapper
+praiseMapper=com.itany.netclass.dao.PraiseMapper
+resourceMapper=com.itany.netclass.dao.ResourceMapper
+userMapper=com.itany.netclass.dao.UserMapper
+userResourceMapper=com.itany.netclass.dao.UserResourceMapper
+
+# serviceImpl
+chapterServiceTarget=com.itany.netclass.service.impl.ChapterServiceImpl
+commentServiceTarget=com.itany.netclass.service.impl.CommentServiceImpl
+courseServiceTarget=com.itany.netclass.service.impl.CourseServiceImpl
+courseTypeServiceTarget=com.itany.netclass.service.impl.CourseTypeServiceImpl
+goldPointsServiceTarget=com.itany.netclass.service.impl.GoldPointsServiceImpl
+# praiseServiceTarget=com.itany.netclass.service.impl.PraiseServiceImpl
+resourceServiceTarget=com.itany.netclass.service.impl.ResourceServiceImpl
+userServiceTarget=com.itany.netclass.service.impl.UserServiceImpl
+# userResourceServiceTarget=com.itany.netclass.service.impl.UserResourceServiceImpl
+
+# serviceProxy
+chapterService=com.itany.netclass.service.proxy.ChapterServiceProxy
+commentService=com.itany.netclass.service.proxy.CommentServiceProxy
+courseService=com.itany.netclass.service.proxy.CourseServiceProxy
+courseTypeService=com.itany.netclass.service.proxy.CourseTypeServiceProxy
+goldPointsService=com.itany.netclass.service.proxy.GoldPointsServiceProxy
+# praiseService=com.itany.netclass.service.proxy.PraiseServiceProxy
+resourceService=com.itany.netclass.service.proxy.ResourceServiceProxy
+userService=com.itany.netclass.service.proxy.UserServiceProxy
+# userResourceService=com.itany.netclass.service.proxy.UserResourceServiceProxy

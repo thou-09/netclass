@@ -1,0 +1,144 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.itany.netclass.dao.UserMapper">
+    <!-- 二级缓存 -->
+    <cache/>
+
+    <!-- 新增一个用户，并返回主键 -->
+    <insert id="saveUserReturnPrimaryKey" parameterType="user"
+            useGeneratedKeys="true" keyProperty="id" keyColumn="id">
+        insert into t_user
+            (login_name, nickname, password, role, email, create_date, status)
+        values
+            (#{loginName}, #{nickname}, #{password}, #{role}, #{email}, #{createDate}, #{status});
+    </insert>
+
+    <!-- 批量新增 -->
+    <insert id="saveUsers" parameterType="list">
+        insert into t_user
+            (login_name, nickname, password, role, email, create_date, status)
+        values
+        <foreach collection="list" item="user" separator=",">
+            (#{user.loginName}, #{user.nickname}, #{user.password}, #{user.role},
+             #{user.email}, #{user.createDate}, #{user.status})
+        </foreach>
+    </insert>
+
+    <!-- 根据主键删除用户 -->
+    <delete id="removeUserById" parameterType="integer">
+        delete
+        from t_user
+        where id = #{id};
+    </delete>
+    
+    <!-- 根据主键修改用户 -->
+    <update id="updateUserById" parameterType="user">
+        update t_user
+        <set>
+            <if test="null != password and '' != password">
+                password = #{password},
+            </if>
+            <if test="null != nickname and '' != nickname">
+                nickname = #{nickname},
+            </if>
+            <if test="null != email and '' != email">
+                email = #{email},
+            </if>
+            <if test="null != role and '' != role">
+                role = #{role},
+            </if>
+            <if test="null != signDate">
+                sign_date = #{signDate},
+            </if>
+            <if test="null != status">
+                status = #{status},
+            </if>
+        </set>
+        where id = #{id};
+    </update>
+
+    <!-- 根据主键查询用户 -->
+    <select id="getUserById" parameterType="integer" resultMap="user_map">
+        select <include refid="user_column_list"/>
+        from t_user
+        where id = #{id}
+    </select>
+
+    <!-- 根据登录名查询用户 -->
+    <select id="getUserByLoginName" parameterType="string" resultMap="user_map">
+        select <include refid="user_column_list"/>
+        from t_user
+        where login_name = #{loginName}
+    </select>
+
+    <!-- 根据邮箱查询用户 -->
+    <select id="getUserByEmail" parameterType="string" resultMap="user_map">
+        select <include refid="user_column_list"/>
+        from t_user
+        where email = #{email}
+    </select>
+
+    <!-- 根据登录名和密码查询用户 -->
+    <select id="getUserByLoginNameAndPassword" resultMap="user_map">
+        select <include refid="user_column_list"/>
+        from t_user
+        where login_name = #{loginName} and password = #{password}
+    </select>
+
+    <!-- 根据条件查询所有用户 -->
+    <select id="listUsers" parameterType="userQuery" resultMap="user_map">
+        select <include refid="user_column_list"/>
+        from t_user
+        <where>
+            <if test="null != loginName and '' != loginName">
+                and login_name like concat('%',#{loginName},'%')
+            </if>
+            <if test="null != nickname and '' != nickname">
+                and nickname like concat('%',#{nickname},'%')
+            </if>
+            <if test="null != email and '' != email">
+                and email like concat('%',#{email},'%')
+            </if>
+            <if test="null != role and '' != role">
+                and role = #{role}
+            </if>
+            <if test="null != createDateStart">
+                and create_date &gt;= #{createDateStart}
+            </if>
+            <if test="null != createDateEnd">
+                and create_date &lt;= #{createDateEnd}
+            </if>
+            <if test="null != signDateStart">
+                and sign_date &gt;= #{signDateStart}
+            </if>
+            <if test="null != signDateEnd">
+                and sign_date &lt;= #{signDateEnd}
+            </if>
+                and login_name != 'admin'
+        </where>
+    </select>
+
+    <!-- 根据登录名和邮箱查询用户 -->
+    <select id="getUserByLoginNameAndEmail" resultMap="user_map">
+        select <include refid="user_column_list"/>
+        from t_user
+        where login_name = #{loginName} and email = #{email};
+    </select>
+
+    <sql id="user_column_list">
+        id, login_name, nickname, password, role, email, sign_date, create_date, status
+    </sql>
+
+    <resultMap id="user_map" type="user">
+        <id property="id" column="id"/>
+        <result property="loginName" column="login_name"/>
+        <result property="password" column="password"/>
+        <result property="role" column="role"/>
+        <result property="email" column="email"/>
+        <result property="signDate" column="sign_date"/>
+        <result property="createDate" column="create_date"/>
+        <result property="status" column="status"/>
+    </resultMap>
+</mapper>

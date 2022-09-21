@@ -1,0 +1,375 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.itany.netclass.dao.CourseMapper">
+    <!-- 二级缓存 -->
+    <cache/>
+
+    <!-- 新增一个课程 -->
+    <insert id="saveCourse" parameterType="course">
+        insert into t_course
+            (course_name, course_info, author, cover_image_url, create_date, click_number,
+             status, recommendation_grade, course_type_id)
+        values
+            (#{courseName}, #{courseInfo}, #{author}, #{coverImageUrl}, #{createDate}, #{clickNumber},
+             #{status}, #{recommendationGrade}, #{courseTypeId});
+    </insert>
+
+    <!-- 根据 id 删除课程 -->
+    <delete id="removeCourseById" parameterType="integer">
+        delete
+        from t_course
+        where #{id};
+    </delete>
+
+    <!-- 根据 id 更新课程 -->
+    <update id="updateCourseById" parameterType="course">
+        update t_course
+        <set>
+            <if test="null != courseName and '' != courseName">
+                course_name = #{courseName},
+            </if>
+            <if test="null != courseInfo and '' != courseInfo">
+                course_info = #{courseInfo},
+            </if>
+            <if test="null != author and '' != author">
+                author = #{author},
+            </if>
+            <if test="null != coverImageUrl and '' != coverImageUrl">
+                cover_image_url = #{coverImageUrl},
+            </if>
+            <if test="null != recommendationGrade">
+                recommendation_grade = #{recommendationGrade},
+            </if>
+            <if test="null != courseTypeId">
+                course_type_id = #{courseTypeId},
+            </if>
+            <if test="null != clickNumber">
+                click_number = #{clickNumber},
+            </if>
+            <if test="null != status">
+                status = #{status},
+            </if>
+        </set>
+        where id = #{id}
+    </update>
+
+    <!-- 根据 id 查询课程 -->
+    <select id="getCourseById" parameterType="integer" resultMap="course_map">
+        select <include refid="course_column_list"/>
+        from t_course
+        where id = #{id}
+    </select>
+
+    <!-- 根据 id 查询课程信息，包括类别信息 -->
+    <select id="getCourseWithTypeById" parameterType="integer" resultMap="course_with_type_map">
+        select <include refid="course_column_list_with_type"/>
+        from t_course c
+            join t_course_type ct
+                on c.course_type_id = ct.id
+        where c.id = #{id}
+    </select>
+
+    <!-- 根据 courseName 查询课程信息 -->
+    <select id="getCourseByCourseName" parameterType="string" resultMap="course_map">
+        select <include refid="course_column_list"/>
+        from t_course
+        where course_name = #{name}
+    </select>
+
+    <!-- 根据条件查询所有课程，包含 CourseType 信息 -->
+    <select id="listCoursesWithCourseType" parameterType="courseQuery" resultMap="course_with_type_map">
+        select <include refid="course_column_list_with_type"/>
+        from t_course c
+            join t_course_type ct
+                on c.course_type_id = ct.id
+        <where>
+            <if test="null != author and '' != author">
+                and c.author like concat('%', #{author}, '%')
+            </if>
+            <if test="null != courseName and '' != courseName">
+                and c.course_name like concat('%', #{courseName}, '%')
+            </if>
+            <if test="null != status">
+                and c.status = #{status}
+            </if>
+            <if test="null != courseTypeId">
+                and c.course_type_id = #{courseTypeId}
+            </if>
+            <if test="null != createDateStart">
+                and c.create_date &gt;= #{createDateStart}
+            </if>
+            <if test="null != createDateEnd">
+                and c.create_date &lt;= #{createDateEnd}
+            </if>
+        </where>
+    </select>
+    
+    <!-- 查询一级课程类别下所有课程点击量前四的课程 -->
+    <select id="listTopFour" parameterType="integer" resultMap="course_map">
+        select <include refid="course_column_list"/>,(
+            select sum(r.cost_number)
+            from t_chapter ch
+            left join t_resource r
+            on ch.id = r.chapter_id
+            where ch.course_id = c.id
+                and ch.status = 1
+        ) total_cost
+        from t_course c
+        where c.course_type_id in(
+            select t2.id
+            from t_course_type t1
+            left join t_course_type t2
+            on t1.id = t2.parent_id
+            where t1.parent_id = #{id}
+        ) and c.status = 1
+        order by c.click_number desc
+        limit 4
+    </select>
+
+    <!-- 查询所有课程的点击量前十的课程 -->
+    <select id="listTopTen" resultMap="course_with_type_map">
+        select <include refid="course_column_list_with_type"/>,(
+            select sum(r.cost_number)
+            from t_chapter ch
+                 left join t_resource r
+                           on ch.id = r.chapter_id
+            where ch.course_id = c.id
+              and ch.status = 1
+        ) total_cost
+        from t_course c
+             left join t_course_type ct
+                       on c.course_type_id = ct.id
+        where c.status = 1
+        order by c.click_number desc
+        limit 10
+    </select>
+
+    <!-- 根据前台查询条件分页查询课程信息，仅限前台查询使用 -->
+    <select id="listForFront" parameterType="courseQuery" resultMap="course_with_type_map">
+        select <include refid="course_column_list_with_type"/>,(
+            select sum(r.cost_number)
+            from t_chapter ch
+            left join t_resource r
+            on ch.id = r.chapter_id
+            where ch.course_id = c.id
+            and ch.status = 1
+        ) total_cost
+        from t_course c
+            left join t_course_type ct
+                on c.course_type_id = ct.id
+        <where>
+            <if test="null != courseName and '' != courseName">
+                and c.course_name like concat('%', #{courseName}, '%')
+            </if>
+            <if test="typeLevel == 1">
+                <if test="null != courseTypeId">
+                    and c.course_type_id in (
+                        select id
+                        from t_course_type
+                        where parent_id in (
+                            select id
+                            from t_course_type
+                            where parent_id = ${courseTypeId}
+                            and status = 1
+                        )
+                        and status = 1
+                    )
+                </if>
+            </if>
+            <if test="typeLevel == 3">
+                <if test="null != courseTypeId">
+                    and c.course_type_id = #{courseTypeId}
+                </if>
+            </if>
+            <if test="true == hideLearned">
+                and c.id not in (
+                    select course_id
+                    from t_chapter
+                    where id in (
+                        select chapter_id
+                        from t_resource
+                        where id in (
+                            select resource_id
+                            from t_user_resource
+                            where user_id = #{loginUserId}
+                        )
+                    )
+                )
+            </if>
+            and c.status = 1
+        </where>
+        <if test="sortType == 1">
+            order by c.create_date desc
+        </if>
+        <if test="sortType == 2">
+            order by c.click_number desc
+        </if>
+    </select>
+
+    <!-- 通过 id 查询课程及所有章节和章节的资源 -->
+    <select id="getCourseWithChaptersAndResourceById" resultMap="course_with_chapters_and_resource_map">
+        select <include refid="course_column_list_with_chapters_and_resource"/>, (
+            select sum(total_time)
+            from t_resource
+            where chapter_id in (
+                select id
+                from t_chapter
+                where course_id = #{id}
+            )
+        ) time_count
+        from t_course c
+             left join t_chapter ch
+                   on c.id = ch.course_id
+             left join t_resource r
+                   on ch.id = r.chapter_id
+        where c.id = #{id} and ch.status = 1 and r.status = 1
+    </select>
+
+    <!-- 根据 chapterId 查找对应课程 -->
+    <select id="getCourseByChapterId" resultMap="course_map">
+        select c.*
+        from t_course c
+            left join t_chapter ch
+                on c.id = ch.course_id
+        where ch.id = #{cid}
+    </select>
+
+    <sql id="course_column_list">
+        id,
+        course_name,
+        course_info,
+        author,
+        cover_image_url,
+        create_date,
+        click_number,
+        status,
+        recommendation_grade,
+        course_type_id
+    </sql>
+
+    <sql id="course_column_list_with_type">
+        c.id c_id,
+        c.course_name c_course_name,
+        c.course_info c_course_info,
+        c.author c_author,
+        c.cover_image_url c_cover_image_url,
+        c.create_date c_create_date,
+        c.click_number c_click_number,
+        c.status c_status,
+        c.recommendation_grade c_recommendation_grade,
+        c.course_type_id c_course_type_id,
+        ct.id ct_id,
+        ct.type_name ct_type_name,
+        ct.parent_id ct_parent_id,
+        ct.status ct_status
+    </sql>
+
+    <sql id="course_column_list_with_chapters_and_resource">
+        c.id c_id,
+        c.course_name c_course_name,
+        c.course_info c_course_info,
+        c.author c_author,
+        c.cover_image_url c_cover_image_url,
+        c.create_date c_create_date,
+        c.click_number c_click_number,
+        c.status c_status,
+        c.recommendation_grade c_recommendation_grade,
+        c.course_type_id c_course_type_id,
+        ch.id ch_id,
+        ch.course_id ch_course_id,
+        ch.title ch_title,
+        ch.info ch_info,
+        ch.create_date ch_create_date,
+        ch.status ch_status,
+        r.id r_id,
+        r.title r_title,
+        r.path r_path,
+        r.cover_image_url r_cover_image_url,
+        r.original_name r_original_name,
+        r.file_size r_file_size,
+        r.file_type r_file_type,
+        r.total_time r_total_time,
+        r.click_count r_click_count,
+        r.create_date r_create_date,
+        r.cost_type r_cost_type,
+        r.cost_number r_cost_number,
+        r.user_id r_user_id,
+        r.chapter_id r_chapter_id,
+        r.status r_status
+    </sql>
+
+    <resultMap id="course_map" type="course">
+        <id property="id" column="id"/>
+        <result property="courseName" column="course_name"/>
+        <result property="courseInfo" column="course_info"/>
+        <result property="author" column="author"/>
+        <result property="coverImageUrl" column="cover_image_url"/>
+        <result property="createDate" column="create_date"/>
+        <result property="clickNumber" column="click_number"/>
+        <result property="status" column="status"/>
+        <result property="recommendationGrade" column="recommendation_grade"/>
+        <result property="courseTypeId" column="course_type_id"/>
+        <result property="totalCost" column="total_cost"/>
+    </resultMap>
+
+    <resultMap id="course_with_type_map" type="course">
+        <id property="id" column="c_id"/>
+        <result property="courseName" column="c_course_name"/>
+        <result property="courseInfo" column="c_course_info"/>
+        <result property="author" column="c_author"/>
+        <result property="coverImageUrl" column="c_cover_image_url"/>
+        <result property="createDate" column="c_create_date"/>
+        <result property="clickNumber" column="c_click_number"/>
+        <result property="status" column="c_status"/>
+        <result property="recommendationGrade" column="c_recommendation_grade"/>
+        <result property="courseTypeId" column="c_course_type_id"/>
+        <result property="totalCost" column="total_cost"/>
+        <association property="courseType" javaType="courseType">
+            <id property="id" column="ct_id"/>
+            <result property="typeName" column="ct_type_name"/>
+            <result property="parentId" column="ct_parent_id"/>
+            <result property="status" column="ct_status"/>
+        </association>
+    </resultMap>
+
+    <resultMap id="course_with_chapters_and_resource_map" type="course">
+        <id property="id" column="c_id"/>
+        <result property="courseName" column="c_course_name"/>
+        <result property="courseInfo" column="c_course_info"/>
+        <result property="author" column="c_author"/>
+        <result property="coverImageUrl" column="c_cover_image_url"/>
+        <result property="createDate" column="c_create_date"/>
+        <result property="clickNumber" column="c_click_number"/>
+        <result property="status" column="c_status"/>
+        <result property="recommendationGrade" column="c_recommendation_grade"/>
+        <result property="courseTypeId" column="c_course_type_id"/>
+        <result property="timeCount" column="time_count"/>
+        <collection property="chapters" ofType="chapter">
+            <id property="id" column="ch_id"/>
+            <result property="courseId" column="ch_course_id"/>
+            <result property="title" column="ch_title"/>
+            <result property="info" column="ch_info"/>
+            <result property="createDate" column="ch_create_date"/>
+            <result property="status" column="ch_status"/>
+            <association property="resource" javaType="resource">
+                <id property="id" column="r_id"/>
+                <result property="title" column="r_title"/>
+                <result property="path" column="r_path"/>
+                <result property="coverImageUrl" column="r_cover_image_url"/>
+                <result property="originalName" column="r_original_name"/>
+                <result property="fileSize" column="r_file_size"/>
+                <result property="fileType" column="r_file_type"/>
+                <result property="totalTime" column="r_total_time"/>
+                <result property="clickCount" column="r_click_count"/>
+                <result property="createDate" column="r_create_date"/>
+                <result property="costType" column="r_cost_type"/>
+                <result property="costNumber" column="r_cost_number"/>
+                <result property="userId" column="r_user_id"/>
+                <result property="chapterId" column="r_chapter_id"/>
+                <result property="status" column="r_status"/>
+            </association>
+        </collection>
+    </resultMap>
+</mapper>

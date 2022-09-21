@@ -1,0 +1,220 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.itany.netclass.dao.ChapterMapper">
+    <!-- 二级缓存 -->
+    <cache/>
+
+    <!-- 新增一个章节 -->
+    <insert id="saveChapter" parameterType="chapter">
+        insert into t_chapter
+            (course_id, title, info, create_date, status)
+        values
+            (#{courseId}, #{title}, #{info}, #{createDate}, #{status});
+    </insert>
+
+    <!-- 新增一个章节，并返回主键 -->
+    <insert id="saveChapterReturnPrimaryKey" parameterType="chapter"
+            useGeneratedKeys="true" keyProperty="id" keyColumn="id">
+        insert into t_chapter
+            (course_id, title, info, create_date, status)
+        values
+            (#{courseId}, #{title}, #{info}, #{createDate}, #{status});
+    </insert>
+
+    <!-- 根据 id 删除章节 -->
+    <delete id="removeChapterById" parameterType="integer">
+        delete
+        from t_chapter
+        where #{id};
+    </delete>
+
+    <!-- 根据 id 修改章节 -->
+    <update id="updateChapterById" parameterType="chapter">
+        update t_chapter
+        <set>
+            <if test="null != title and '' != title">
+                title = #{title},
+            </if>
+            <if test="null != info and '' != info">
+                info = #{info},
+            </if>
+            <if test="null != status">
+                status = #{status},
+            </if>
+        </set>
+        where id = #{id};
+    </update>
+
+    <!-- 根据 id 批量修改章节状态 -->
+    <update id="updateStatusByIds">
+        update t_chapter
+        <set>
+            <if test="null != status">
+                status = #{status}
+            </if>
+        </set>
+        where id in
+        <foreach collection="ids" item="id" separator="," open="(" close=")">
+            #{id}
+        </foreach>
+    </update>
+
+    <!-- 根据 id 查询章节 -->
+    <select id="getChapterById" parameterType="integer" resultMap="chapter_map">
+        select <include refid="chapter_column_list"/>
+        from t_chapter
+        where id = #{id}
+    </select>
+
+    <!-- 根据 id 查询章节，包含资源信息 -->
+    <select id="getChapterWithResourceById" parameterType="integer" resultMap="chapter_with_resource_map">
+        select <include refid="chapter_column_list_with_resource"/>
+        from t_chapter ch
+            left join t_resource r
+                on ch.id = r.chapter_id
+        where ch.id = #{id}
+    </select>
+
+    <!-- 根据 id 查询章节，包含课程信息 -->
+    <select id="getChapterWithCourseById" parameterType="integer" resultMap="chapter_with_course_map">
+        select <include refid="chapter_column_list_with_course"/>
+        from t_chapter ch
+            left join t_course c
+                on ch.course_id = c.id
+        where ch.id = #{id}
+    </select>
+
+    <!-- 根据 title 查询章节 -->
+    <select id="getChapterByTitle" parameterType="string" resultMap="chapter_map">
+        select <include refid="chapter_column_list"/>
+        from t_chapter
+        where title = #{title}
+    </select>
+
+    <!-- 根据 title 和 courseId 查询章节 -->
+    <select id="getChapterByTitleAndCourseId" resultMap="chapter_map">
+        select <include refid="chapter_column_list"/>
+        from t_chapter
+        where title = #{title}  and course_id = #{cid}
+    </select>
+
+    <!-- 查询所有章节 -->
+    <select id="listChapters" resultMap="chapter_map">
+        select <include refid="chapter_column_list"/>
+        from t_chapter
+    </select>
+
+    <!-- 根据条件查询指定 courseId 的章节信息 -->
+    <select id="listChaptersByCourseId" resultType="chapter">
+        select ch.id, ch.course_id courseId, ch.title, ch.info, ch.create_date createDate, ch.status, r.id resourceId
+        from t_chapter ch
+            left join t_resource r
+                on ch.id = r.chapter_id
+        <where>
+            <if test="null != title and '' != title">
+                and ch.title like concat('%',#{title},'%')
+            </if>
+            <if test="null != info and '' != info">
+                and ch.info like concat('%',#{info},'%')
+            </if>
+            <if test="null != createDateStart">
+                and ch.create_date &gt;= #{createDateStart}
+            </if>
+            <if test="null != createDateEnd">
+                and ch.create_date &lt;= #{createDateEnd}
+            </if>
+            <if test="null != status">
+                and ch.status = #{status}
+            </if>
+            and ch.course_id = #{courseId}
+        </where>
+    </select>
+
+    <!-- 根据 courseId 查找当前课程下的所有章节的 id 集合 -->
+    <select id="listChapterIdsByCourseId" parameterType="integer" resultType="integer">
+        select id
+        from t_chapter
+        where course_id = #{cid}
+    </select>
+
+    <sql id="chapter_column_list">
+        id, course_id, title, info, create_date, status
+    </sql>
+
+    <sql id="chapter_column_list_with_course">
+        ch.id ch_id, ch.course_id ch_course_id, ch.title ch_title, ch.info ch_info,
+        ch.create_date ch_create_date, ch.status ch_status,
+        c.id c_id, c.course_name c_course_name, c.course_info c_course_info, c.author c_author,
+        c.cover_image_url c_cover_image_url, c.create_date c_create_date, c.click_number c_click_number,
+        c.status c_status, c.recommendation_grade c_recommendation_grade, c.course_type_id c_course_type_id
+    </sql>
+
+    <sql id="chapter_column_list_with_resource">
+        ch.id ch_id, ch.course_id ch_course_id, ch.title ch_title, ch.info ch_info,
+        ch.create_date ch_create_date, ch.status ch_status,
+        r.id r_id, r.title r_title, r.path r_path, r.cover_image_url r_cover_image_url,
+        r.original_name r_original_name, r.file_size r_file_size, r.file_type r_file_type,
+        r.total_time r_total_time, r.click_count r_click_count, r.create_date r_create_date,
+        r.cost_type r_cost_type, r.cost_number r_cost_number, r.user_id r_user_id,
+        r.chapter_id r_chapter_id, r.status r_status
+    </sql>
+
+    <resultMap id="chapter_map" type="chapter">
+        <id property="id" column="id"/>
+        <result property="courseId" column="course_id"/>
+        <result property="title" column="title"/>
+        <result property="info" column="info"/>
+        <result property="createDate" column="create_date"/>
+        <result property="status" column="status"/>
+        <result property="resourceId" column="r_id"/>
+    </resultMap>
+
+    <resultMap id="chapter_with_course_map" type="chapter">
+        <id property="id" column="ch_id"/>
+        <result property="courseId" column="ch_course_id"/>
+        <result property="title" column="ch_title"/>
+        <result property="info" column="ch_info"/>
+        <result property="createDate" column="ch_create_date"/>
+        <result property="status" column="ch_status"/>
+        <association property="course" javaType="course">
+            <id property="id" column="c_id"/>
+            <result property="courseName" column="c_course_name"/>
+            <result property="courseInfo" column="c_course_info"/>
+            <result property="author" column="c_author"/>
+            <result property="coverImageUrl" column="c_cover_image_url"/>
+            <result property="createDate" column="c_create_date"/>
+            <result property="clickNumber" column="c_click_number"/>
+            <result property="status" column="c_status"/>
+            <result property="recommendationGrade" column="c_recommendation_grade"/>
+            <result property="courseTypeId" column="c_course_type_id"/>
+        </association>
+    </resultMap>
+
+    <resultMap id="chapter_with_resource_map" type="chapter">
+        <id property="id" column="ch_id"/>
+        <result property="courseId" column="ch_course_id"/>
+        <result property="title" column="ch_title"/>
+        <result property="info" column="ch_info"/>
+        <result property="createDate" column="ch_create_date"/>
+        <result property="status" column="ch_status"/>
+        <association property="resource" javaType="resource">
+            <id property="id" column="r_id"/>
+            <result property="title" column="r_title"/>
+            <result property="path" column="r_path"/>
+            <result property="coverImageUrl" column="r_cover_image_url"/>
+            <result property="originalName" column="r_original_name"/>
+            <result property="fileSize" column="r_file_size"/>
+            <result property="fileType" column="r_file_type"/>
+            <result property="totalTime" column="r_total_time"/>
+            <result property="clickCount" column="r_click_count"/>
+            <result property="createDate" column="r_create_date"/>
+            <result property="costType" column="r_cost_type"/>
+            <result property="costNumber" column="r_cost_number"/>
+            <result property="userId" column="r_user_id"/>
+            <result property="chapterId" column="r_chapter_id"/>
+            <result property="status" column="r_status"/>
+        </association>
+    </resultMap>
+</mapper>

@@ -1,0 +1,82 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE configuration PUBLIC "-//mybatis.org//DTD Config 3.0//EN"
+		"http://mybatis.org/dtd/mybatis-3-config.dtd" >
+<configuration>
+
+	<!--配置 properties 文件位置	-->
+	<properties resource="datasource.properties"/>
+
+	<settings>
+		<!-- 打印 sql 日志 -->
+		<setting name="logImpl" value="STDOUT_LOGGING" />
+		<!-- 开启缓存 -->
+		<setting name="cacheEnabled" value="true"/>
+	</settings>
+
+	<!--别名配置	-->
+	<typeAliases>
+		<package name="com.itany.netclass.entity"/>
+		<package name="com.itany.netclass.query"/>
+	</typeAliases>
+
+<plugins>
+	<!-- 配置 mybatis 分页插件 -->
+    <!-- com.github.pagehelper 为 PageHelper 类所在包名 -->
+    <plugin interceptor="com.github.pagehelper.PageHelper">
+        <!-- 4.0.0 以后版本可以不设置该参数 -->
+        <property name="dialect" value="mysql"/>
+        <!-- 该参数默认为 false -->
+        <!-- 设置为 true 时，会将 RowBounds 第一个参数 offset 当成 pageNum 页码使用 -->
+        <!-- 和 startPage 中的 pageNum 效果一样-->
+        <property name="offsetAsPageNum" value="true"/>
+        <!-- 该参数默认为 false -->
+        <!-- 设置为 true 时，使用 RowBounds 分页会进行 count 查询 -->
+        <property name="rowBoundsWithCount" value="true"/>
+        <!-- 设置为 true 时，如果 pageSize = 0 或者 RowBounds.limit = 0 就会查询出全部的结果 -->
+        <!-- （相当于没有执行分页查询，但是返回结果仍然是 Page 类型）-->
+        <property name="pageSizeZero" value="true"/>
+        <!-- 3.3.0 版本可用 - 分页参数合理化，默认 false 禁用 -->
+        <!-- 启用合理化时，如果 pageNum < 1 会查询第一页，如果 pageNum > pages 会查询最后一页 -->
+        <!-- 禁用合理化时，如果 pageNum < 1或 pageNum > pages 会返回空数据 -->
+        <property name="reasonable" value="false"/>
+        <!-- 3.5.0 版本可用 - 为了支持 startPage(Object params) 方法 -->
+        <!-- 增加了一个 params 参数来配置参数映射，用于从 Map 或 ServletRequest 中取值 -->
+        <!-- 可以配置 pageNum, pageSize, count, pageSizeZero, reasonable, orderBy 不配置映射的用默认值 -->
+        <!-- 不理解该含义的前提下，不要随便复制该配置 -->
+        <property name="params" value="pageNum=pageHelperStart;pageSize=pageHelperRows;"/>
+        <!-- 支持通过 Mapper 接口参数来传递分页参数 -->
+        <property name="supportMethodsArguments" value="false"/>
+        <!-- always 总是返回 PageInfo 类型，check 检查返回类型是否为 PageInfo， none 返回 Page -->
+        <property name="returnPageInfo" value="none"/>
+    </plugin>
+</plugins>
+
+	<!-- 当前应用所有环境的配置 default 默认使用哪个环境配置 -->
+	<environments default="mybatis">
+		<!-- 配置一种环境配置 id 当前环境配置的唯一标识符，供父标签 default 使用 -->
+		<environment id="mybatis">
+			<!-- 事务管理器 -->
+			<transactionManager type="JDBC"/>
+			<!-- 连接信息 -->
+			<dataSource type="POOLED" >
+				<property name="driver" value="${jdbc.driverClassName}"/>
+				<property name="url" value="${jdbc.url}"/>
+				<property name="username" value="${jdbc.username}"/>
+				<property name="password" value="${jdbc.password}"/>
+			</dataSource>
+		</environment>
+	</environments>
+	
+	<!-- mapper文件的位置 -->
+	<mappers>
+		<mapper resource="mapper/ChapterMapper.xml"/>
+		<mapper resource="mapper/CommentMapper.xml"/>
+		<mapper resource="mapper/CourseMapper.xml"/>
+		<mapper resource="mapper/CourseTypeMapper.xml"/>
+		<mapper resource="mapper/GoldPointsMapper.xml"/>
+		<mapper resource="mapper/PraiseMapper.xml"/>
+		<mapper resource="mapper/ResourceMapper.xml"/>
+		<mapper resource="mapper/UserMapper.xml"/>
+		<mapper resource="mapper/UserResourceMapper.xml"/>
+	</mappers>
+</configuration>

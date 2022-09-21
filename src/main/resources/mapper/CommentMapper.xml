@@ -1,0 +1,179 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.itany.netclass.dao.CommentMapper">
+    <!-- 二级缓存 -->
+    <cache/>
+
+    <!-- 新增一个评论 -->
+    <insert id="saveComment" parameterType="comment">
+        insert into t_comment
+            (context, create_date, user_id, resource_id, status)
+        values
+            (#{context}, #{createDate}, #{userId}, #{resourceId}, #{status});
+    </insert>
+
+    <!-- 根据 id 删除评论 -->
+    <delete id="removeCommentById" parameterType="integer">
+        delete
+        from t_comment
+        where id = #{id};
+    </delete>
+
+    <!-- 根据 id 修改评论内容 -->
+    <update id="updateCommentById" parameterType="comment">
+        update t_comment
+        <set>
+            <if test="null != status">
+                status = #{status},
+            </if>
+        </set>
+        where id = #{id}
+    </update>
+
+    <!-- 根据 id 查询评论 -->
+    <select id="getCommentById" parameterType="integer" resultMap="comment_map">
+        select <include refid="comment_column_list"/>
+        from t_comment
+        where id = #{id}
+    </select>
+
+    <!-- 根据 userId 查询评论 -->
+    <select id="listCommentsByUserId" parameterType="integer" resultMap="comment_map">
+        select <include refid="comment_column_list"/>
+        from t_comment
+        where user_id = #{uid}
+    </select>
+
+    <!-- 根据 resourceId 查询评论 -->
+    <select id="listCommentsByResourceId" parameterType="integer" resultMap="comment_map">
+        select <include refid="comment_column_list"/>
+        from t_comment
+        where resource_id = #{rid}
+    </select>
+
+    <!-- 根据条件查询评论，包含发布的用户信息 -->
+    <select id="listCommentsWithUser" parameterType="commentQuery" resultMap="comment_with_user_map">
+        select <include refid="comment_column_list_with_user"/>,(
+            select count(id)
+            from t_praise
+            where comment_id = c.id
+        ) c_prise_count
+        from t_comment c
+            join t_user u
+                on c.user_id = u.id
+        <where>
+            <if test="null != resourceId">
+                and c.resource_id = #{resourceId}
+            </if>
+            <if test="null != userLoginName and '' != userLoginName">
+                and u.login_name like concat('%', #{userLoginName}, '%')
+            </if>
+            <if test="null != context and '' != context">
+                and c.context like concat('%', #{context}, '%')
+            </if>
+            <if test="null != createDateStart">
+                and c.create_date &gt;= #{createDateStart}
+            </if>
+            <if test="null != createDateEnd">
+                and c.create_date &lt;= #{createDateEnd}
+            </if>
+            <choose>
+                <when test="null == status">
+                    and c.status != 2
+                </when>
+                <otherwise>
+                    and c.status = #{status}
+                </otherwise>
+            </choose>
+        </where>
+    </select>
+
+    <!-- 根据 userId 查询评论数量 -->
+    <select id="countCommentByUserId" parameterType="integer" resultType="integer">
+        select count(id)
+        from t_comment
+        where user_id = #{uid}
+    </select>
+
+    <!-- 根据 resourceId 查询评论数量 -->
+    <select id="countCommentByResourceId" parameterType="integer" resultType="integer">
+        select count(id)
+        from t_comment
+        where resource_id = #{rid}
+    </select>
+
+    <!-- 根据 courseId 查询评论 -->
+    <select id="listCommentsByCourseId" resultMap="comment_with_user_map">
+        select <include refid="comment_column_list_with_user"/>, (
+            select count(1)
+            from t_praise
+            where comment_id = c.id
+        ) prise_count
+        from t_comment c
+             left join t_resource r
+                   on c.resource_id = r.id
+             left join t_chapter ch
+                   on r.chapter_id = ch.id
+            left join t_user u
+                    on c.user_id = u.id
+        where ch.course_id = #{id} and c.status = 1
+    </select>
+
+    <!-- 根据资源 id 查询评论，和点赞 -->
+    <select id="listCommentsWithUserByResourceId" resultMap="comment_with_user_map">
+        select <include refid="comment_column_list_with_user"/>, (
+            select count(1)
+            from t_praise
+            where comment_id = c.id
+        ) prise_count
+        from t_comment c
+            left join t_user u
+                on c.user_id = u.id
+        where c.resource_id = #{id} and c.status = 1
+    </select>
+
+    <sql id="comment_column_list">
+        id, context, create_date, user_id, resource_id, status
+    </sql>
+
+    <sql id="comment_column_list_with_user">
+        c.id c_id, c.context c_context, c.create_date c_create_date, c.user_id c_user_id,
+        c.resource_id c_resource_id, c.status c_status,
+        u.id u_id, u.login_name u_login_name, u.nickname u_nickname, u.password u_password,
+        u.role u_role, u.email u_email, u.sign_date u_sign_date, u.create_date u_create_date,
+        u.status u_status
+    </sql>
+
+    <resultMap id="comment_map" type="comment">
+        <id property="id" column="id"/>
+        <result property="context" column="context"/>
+        <result property="createDate" column="create_date"/>
+        <result property="userId" column="user_id"/>
+        <result property="resourceId" column="resource_id"/>
+        <result property="status" column="status"/>
+        <result property="priseCount" column="prise_count"/>
+    </resultMap>
+
+    <resultMap id="comment_with_user_map" type="comment">
+        <id property="id" column="c_id"/>
+        <result property="context" column="c_context"/>
+        <result property="createDate" column="c_create_date"/>
+        <result property="userId" column="c_user_id"/>
+        <result property="resourceId" column="c_resource_id"/>
+        <result property="status" column="c_status"/>
+        <result property="priseCount" column="prise_count"/>
+        <association property="user" javaType="user">
+            <id property="id" column="u_id"/>
+            <result property="loginName" column="u_login_name"/>
+            <result property="nickname" column="u_nickname"/>
+            <result property="email" column="u_email"/>
+            <result property="status" column="u_status"/>
+            <result property="createDate" column="u_create_date"/>
+            <result property="role" column="u_role"/>
+            <result property="signDate" column="u_sign_date"/>
+            <result property="password" column="u_password"/>
+        </association>
+    </resultMap>
+</mapper>

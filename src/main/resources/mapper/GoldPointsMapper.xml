@@ -1,0 +1,74 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.itany.netclass.dao.GoldPointsMapper">
+    <!-- 二级缓存 -->
+    <cache/>
+
+    <!-- 新增一个积分金币记录 -->
+    <insert id="saveGoldPoints" parameterType="goldPoints">
+        insert into t_gold_points
+            (user_id, point_count, gold_count, info, create_date)
+        values
+            (#{userId}, #{pointCount}, #{goldCount}, #{info}, #{createDate});
+    </insert>
+
+    <!-- 根据 id 删除积分金币记录 -->
+    <delete id="removeGoldPointsById">
+        delete
+        from t_gold_points
+        where id = #{id};
+    </delete>
+
+    <!-- 根据 id 查询积分金币记录 -->
+    <select id="getGoldPointsById" parameterType="integer" resultMap="gold_points_map">
+        select <include refid="gold_points_column_list"/>
+        from t_gold_points
+        where id = #{id}
+    </select>
+
+    <!-- 根据 userId 和 createDate 查询积分金币记录 -->
+    <select id="getGoldPointByUserIdAndCreateDateAndType" resultMap="gold_points_map">
+        select <include refid="gold_points_column_list"/>
+        from t_gold_points
+        where user_id = #{uid}
+          and create_date &gt;= #{dateStart}
+          and create_date &lt;= #{dateEnd}
+          and type = #{type}
+    </select>
+
+    <!-- 根据 userId 查询积分金币记录 -->
+    <select id="listGoldPointsByUserId" parameterType="integer" resultMap="gold_points_map">
+        select <include refid="gold_points_column_list"/>
+        from t_gold_points
+        where user_id = #{uid}
+    </select>
+
+    <!-- 根据 userId 查询积分总数 -->
+    <select id="sumPointByUserId" parameterType="integer" resultType="integer">
+        select ifnull(sum(point_count), 0)
+        from t_gold_points
+        where user_id = #{uid}
+    </select>
+
+    <!-- 根据 userId 查询金币总数 -->
+    <select id="sumGoldByUserId" parameterType="integer" resultType="integer">
+        select ifnull(sum(gold_count), 0)
+        from t_gold_points
+        where user_id = #{uid}
+    </select>
+
+    <sql id="gold_points_column_list">
+        id, user_id, point_count, gold_count, info, create_date
+    </sql>
+
+    <resultMap id="gold_points_map" type="goldPoints">
+        <id property="id" column="id"/>
+        <result property="userId" column="user_id"/>
+        <result property="pointCount" column="point_count"/>
+        <result property="goldCount" column="gold_count"/>
+        <result property="info" column="info"/>
+        <result property="createDate" column="create_date"/>
+    </resultMap>
+</mapper>

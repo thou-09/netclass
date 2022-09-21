@@ -1,0 +1,222 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.itany.netclass.dao.CourseTypeMapper">
+    <!-- 二级缓存 -->
+    <cache/>
+
+    <!-- 新增一个课程类别 -->
+    <insert id="saveCourseType" parameterType="courseType">
+        insert into t_course_type
+            (type_name, parent_id, status)
+        values
+            (#{typeName}, #{parentId}, #{status});
+    </insert>
+
+    <!-- 根据 id 删除课程类别 -->
+    <delete id="removeCourseTypeById" parameterType="integer">
+        delete
+        from t_course_type
+        where id = #{id};
+    </delete>
+
+    <!-- 根据 id 更新课程类别 -->
+    <update id="updateCourseTypeById" parameterType="courseType">
+        update t_course_type
+        <set>
+            <if test="null != typeName and '' != typeName">
+                type_name = #{typeName}
+            </if>
+            <if test="null != status">
+                status = #{status}
+            </if>
+        </set>
+        where id = #{id};
+    </update>
+
+    <!-- 批量根据 id 修改状态 -->
+    <update id="updateStatusByIds">
+        update t_course_type
+        <set>
+            <if test="null != status">
+                status = #{status}
+            </if>
+        </set>
+        where id in
+        <foreach collection="ids" item="id" separator="," open="(" close=")">
+            #{id}
+        </foreach>
+    </update>
+
+    <!-- 批量根据 parentId 查询子节点的 id -->
+    <select id="listSonsIdByParentIds" parameterType="integer" resultType="integer">
+        select t1.id
+        from t_course_type t1
+            join t_course_type t2
+                on t1.parent_id = t2.id
+        where t2.id in 
+        <foreach collection="list" item="pid" separator="," open="(" close=")">
+            #{pid}
+        </foreach>
+    </select>
+
+    <!-- 根据 id 查询课程类别 -->
+    <select id="getCourseTypeById" parameterType="integer" resultMap="course_type_map">
+        select <include refid="course_type_column_list"/>
+        from t_course_type
+        where id = #{id}
+    </select>
+
+    <!-- 根据 typeName 查询课程类别 -->
+    <select id="getCourseTypeByTypeName" parameterType="string" resultMap="course_type_map">
+        select <include refid="course_type_column_list"/>
+        from t_course_type
+        where type_name = #{typeName}
+    </select>
+
+    <!-- 根据 typeName 和 parentId 查询课程类别 -->
+    <select id="getCourseTypeByTypeNameAndParentId" resultMap="course_type_map">
+        select <include refid="course_type_column_list"/>
+        from t_course_type
+        where
+        <if test="pid != null">
+            parent_id = #{pid}
+        </if>
+        <if test="pid == null">
+            parent_id is null
+        </if>
+        and type_name = #{typeName}
+    </select>
+
+    <!-- 根据 parentId 查询课程类别 -->
+    <select id="listCourseTypesByParentId" parameterType="integer" resultMap="course_type_map">
+        select <include refid="course_type_column_list"/>
+        from t_course_type
+        where
+        <if test="pid != null">
+            parent_id = #{pid}
+        </if>
+        <if test="pid == null">
+            parent_id is null
+        </if>
+    </select>
+
+    <!-- 根据 id 查询 parent -->
+    <select id="getParent" parameterType="integer" resultMap="course_type_map">
+        select <include refid="course_type_column_list"/>
+        from t_course_type
+        where id = (
+            select parent_id
+            from t_course_type
+            where id = #{id}
+        )
+    </select>
+
+    <!-- 查询所有课程类别 -->
+    <select id="listCourseTypes" parameterType="courseType" resultMap="course_type_map">
+        select <include refid="course_type_column_list"/>
+        from t_course_type
+    </select>
+    
+    <!-- 查询所有启用的三级课程类别 -->
+    <select id="listThreeLevelTypes" resultType="courseType">
+        select t1.id, t1.type_name as typeName, t1.parent_id as parentId, t1.status
+        from t_course_type t1
+            right join t_course_type t2
+                  on t1.parent_id = t2.id
+            right join t_course_type t3
+                  on t2.parent_id = t3.id
+        where t3.parent_id is null and t1.status = 1
+    </select>
+    
+    <!-- 查询所有课程类别（已启用），树状结构 -->
+    <select id="listAll" resultMap="course_type_tree_map">
+        select <include refid="course_type_column_tree_list"/>
+        from t_course_type t1
+             left join t_course_type t2
+                   on t1.id = t2.parent_id
+             left join t_course_type t3
+                   on t2.id = t3.parent_id
+        where t1.parent_id is null
+            and t1.status = 1
+            and t2.status = 1
+            and t3.status = 1
+            # and (t3.status = 1 or t3.status is null) 没有三级类别
+    </select>
+
+    <!-- 根据 id 查询直接父节点 -->
+    <select id="getParentsById" resultMap="course_type_line_map">
+        select <include refid="course_type_column_tree_list"/>
+        from t_course_type t1
+            left join t_course_type t2
+                on t1.parent_id = t2.id
+            left join t_course_type t3
+                on t2.parent_id = t3.id
+        where t1.id = #{id}
+    </select>
+
+    <sql id="course_type_column_list">
+        id, type_name, parent_id, status
+    </sql>
+
+    <sql id="course_type_column_tree_list">
+        t1.id t1_id,
+        t1.type_name t1_type_name,
+        t1.parent_id t1_parent_id,
+        t1.status t1_status,
+        t2.id t2_id,
+        t2.type_name t2_type_name,
+        t2.parent_id t2_parent_id,
+        t2.status t2_status,
+        t3.id t3_id,
+        t3.type_name t3_type_name,
+        t3.parent_id t3_parent_id,
+        t3.status t3_status
+    </sql>
+
+    <resultMap id="course_type_map" type="courseType">
+        <id property="id" column="id"/>
+        <result property="typeName" column="type_name"/>
+        <result property="parentId" column="parent_id"/>
+        <result property="status" column="status"/>
+    </resultMap>
+
+    <resultMap id="course_type_tree_map" type="courseType">
+        <id property="id" column="t1_id"/>
+        <result property="typeName" column="t1_type_name"/>
+        <result property="parentId" column="t1_parent_id"/>
+        <result property="status" column="t1_status"/>
+        <collection property="courseTypes" ofType="courseType">
+            <id property="id" column="t2_id"/>
+            <result property="typeName" column="t2_type_name"/>
+            <result property="parentId" column="t2_parent_id"/>
+            <result property="status" column="t2_status"/>
+            <collection property="courseTypes" ofType="courseType">
+                <id property="id" column="t3_id"/>
+                <result property="typeName" column="t3_type_name"/>
+                <result property="parentId" column="t3_parent_id"/>
+                <result property="status" column="t3_status"/>
+            </collection>
+        </collection>
+    </resultMap>
+
+    <resultMap id="course_type_line_map" type="courseType">
+        <id property="id" column="t1_id"/>
+        <result property="typeName" column="t1_type_name"/>
+        <result property="parentId" column="t1_parent_id"/>
+        <result property="status" column="t1_status"/>
+        <association property="courseType" javaType="courseType">
+            <id property="id" column="t2_id"/>
+            <result property="typeName" column="t2_type_name"/>
+            <result property="parentId" column="t2_parent_id"/>
+            <result property="status" column="t2_status"/>
+            <association property="courseType" javaType="courseType">
+                <id property="id" column="t3_id"/>
+                <result property="typeName" column="t3_type_name"/>
+                <result property="parentId" column="t3_parent_id"/>
+                <result property="status" column="t3_status"/>
+            </association>
+        </association>
+    </resultMap>
+</mapper>

@@ -1,0 +1,69 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.itany.netclass.dao.PraiseMapper">
+    <!-- 二级缓存 -->
+    <cache/>
+
+    <!-- 新增一个点赞记录 -->
+    <insert id="savePraise" parameterType="praise">
+        insert into t_praise
+            (user_id, comment_id, create_date)
+        values
+            (#{userId}, #{commentId}, #{createDate});
+    </insert>
+
+    <!-- 根据 id 删除点赞记录 -->
+    <delete id="removePraiseById" parameterType="integer">
+        delete
+        from t_praise
+        where id = #{id};
+    </delete>
+
+    <!-- 根据 id 查询点赞记录 -->
+    <select id="getPraiseById" parameterType="integer" resultMap="praise_map">
+        select <include refid="praise_column_list"/>
+        from t_praise
+        where id = #{id}
+    </select>
+
+    <!-- 根据 userId 查询点赞记录 -->
+    <select id="listPraisesByUserId" parameterType="integer" resultMap="praise_map">
+        select <include refid="praise_column_list"/>
+        from t_praise
+        where user_id = #{uid}
+    </select>
+
+    <!-- 根据 commentId 查询点赞记录 -->
+    <select id="listPraisesByCommentId" parameterType="integer" resultMap="praise_map">
+        select <include refid="praise_column_list"/>
+        from t_praise
+        where comment_id = #{cid}
+    </select>
+
+    <!-- 根据 commentId 查询点赞记录数量 -->
+    <select id="countPraiseByCommentId" parameterType="integer" resultType="integer">
+        select count(*)
+        from t_praise
+        where comment_id = #{cid}
+    </select>
+    
+    <!-- 根据 userId 和 commentId 查询点赞记录 -->
+    <select id="getPraiseByUserIdAndCommentId" resultMap="praise_map">
+        select <include refid="praise_column_list"/>
+        from t_praise
+        where comment_id = #{cid} and user_id = #{uid}
+    </select>
+
+    <sql id="praise_column_list">
+        id, user_id, comment_id, create_date
+    </sql>
+
+    <resultMap id="praise_map" type="praise">
+        <id property="id" column="id"/>
+        <result property="userId" column="user_id"/>
+        <result property="commentId" column="comment_id"/>
+        <result property="createDate" column="create_date"/>
+    </resultMap>
+</mapper>

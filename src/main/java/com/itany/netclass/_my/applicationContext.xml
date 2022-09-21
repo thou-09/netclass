@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!-- property 标签用来表示属性，name 表示属性名，ref 表示引用其他的 bean -->
+<beans>
+    <!-- 事务管理器 -->
+    <bean id="transactionManager" class="com.itany.netclass.transaction.impl.MyBatisTransactionManager"/>
+
+    <!-- User相关 -->
+    <bean id="userMapper" class="com.itany.netclass.dao.UserMapper"/>
+    <bean id="userServiceImpl" class="com.itany.netclass.service.impl.UserServiceImpl">
+        <property name="userMapper" ref="userMapper"/>
+    </bean>
+    <bean id="userServiceProxy" class="com.itany.netclass.service.proxy.UserServiceProxy">
+        <property name="transactionManager" ref="transactionManager"/>
+        <property name="userService" ref="userServiceImpl"/>
+    </bean>
+    <bean id="userController" class="com.itany.netclass.controller.UserController">
+        <property name="userService" ref="userServiceProxy"/>
+    </bean>
+</beans>
